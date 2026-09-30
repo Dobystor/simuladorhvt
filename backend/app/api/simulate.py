@@ -46,6 +46,24 @@ _STATUS_BY_TYPE = {
 }
 
 
+def _parse_iso_datetime(value: str) -> datetime | None:
+    """Parse an ISO 8601 string, tolerating the 'Z' UTC suffix.
+
+    Python 3.10's datetime.fromisoformat does not accept a trailing 'Z'
+    (that arrived in 3.11), but JavaScript's toISOString() always emits it.
+    Normalise 'Z' to '+00:00' so this works on the server's Python 3.10.
+    """
+    if not value:
+        return None
+    normalized = value.strip()
+    if normalized.endswith("Z"):
+        normalized = normalized[:-1] + "+00:00"
+    try:
+        return datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+
+
 def _require_publisher(profile_name: str):
     publisher = app_state.get_publisher(profile_name)
     if publisher is None:
@@ -87,9 +105,8 @@ async def simulate_haulage(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Offline mode requires date_status",
             )
-        try:
-            date_status_dt = datetime.fromisoformat(body.date_status)
-        except ValueError:
+        date_status_dt = _parse_iso_datetime(body.date_status)
+        if date_status_dt is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="date_status is not a valid ISO 8601 datetime",

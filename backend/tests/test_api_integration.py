@@ -160,6 +160,24 @@ def test_summary_first_login_uses_24h_window(client, monkeypatch):
     assert "since" in resp.json()
 
 
+def test_offline_accepts_z_suffix_iso(client, monkeypatch):
+    """date_status with a trailing 'Z' (JS toISOString) must be accepted."""
+    token = _login(client, monkeypatch)
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = client.post(
+        "/api/simulate/haulage",
+        headers=headers,
+        json={
+            "event_type": "Load",
+            "mac_vehicle": "ZZ",
+            "mac_beacon": "BB",
+            "mode": "Offline",
+            "date_status": "2020-01-01T00:00:00.000Z",
+        },
+    )
+    assert resp.status_code == 200, resp.text
+
+
 def test_operator_assign_missing_mac(client, monkeypatch):
     token = _login(client, monkeypatch)
     headers = {"Authorization": f"Bearer {token}"}
