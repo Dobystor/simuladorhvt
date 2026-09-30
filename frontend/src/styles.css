@@ -337,3 +337,29 @@ pre { color: var(--text-muted); }
 .banner.err { background: rgba(224,90,122,0.08); color: #f0c0cc; border-color: rgba(224,90,122,0.3); border-left: 3px solid var(--neon-pink); }
 .banner.ok { background: rgba(78,186,138,0.08); color: #b8e6cf; border-color: rgba(78,186,138,0.3); border-left: 3px solid var(--neon-green); }
 .banner ul { margin: 6px 0; }
+
+/* ============================================================
+   Flatpickr theme tweaks to match the cyber-dark palette
+   ============================================================ */
+.flatpickr-calendar {
+  background: var(--bg-3);
+  border: 1px solid var(--border-light);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+}
+.flatpickr-months, .flatpickr-month { background: var(--bg-4); border-radius: 8px 8px 0 0; }
+.flatpickr-current-month .flatpickr-monthDropdown-months { background: var(--bg-4); }
+.flatpickr-weekday { color: var(--neon-cyan); }
+.flatpickr-day { color: var(--text); }
+.flatpickr-day.selected,
+.flatpickr-day.selected:hover {
+  background: rgba(91, 143, 217, 0.25);
+  border-color: var(--neon-blue);
+  color: #fff;
+}
+.flatpickr-day:hover { background: rgba(255, 255, 255, 0.06); }
+.flatpickr-day.today { border-color: var(--neon-cyan); }
+.flatpickr-day.flatpickr-disabled { color: var(--text-dim); }
+.flatpickr-time input { color: var(--neon-cyan); }
+.flatpickr-time .flatpickr-time-separator { color: var(--neon-cyan); }
+.numInputWrapper span.arrowUp:after { border-bottom-color: var(--text-muted); }
+.numInputWrapper span.arrowDown:after { border-top-color: var(--text-muted); }

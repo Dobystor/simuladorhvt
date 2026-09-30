@@ -1,4 +1,5 @@
 import { useAppStore } from '../../store/appStore';
+import DateTimePicker from '../DateTimePicker';
 
 export default function ModeSelector() {
   const mode = useAppStore((s) => s.simulationMode);
@@ -33,12 +34,11 @@ export default function ModeSelector() {
         </div>
       </div>
       <div className="col" style={{ maxWidth: 280 }}>
-        <label>DateStatus (UTC)</label>
-        <input
-          type="datetime-local"
+        <label>DateStatus (past)</label>
+        <DateTimePicker
           disabled={mode !== 'Offline'}
-          value={dateStatus || ''}
-          onChange={(e) => setField('dateStatusInput', e.target.value)}
+          value={dateStatus}
+          onChange={(iso) => setField('dateStatusInput', iso)}
         />
       </div>
     </div>
@@ -53,11 +53,12 @@ export function useModeValidation() {
   if (!mode) return { mode: null, valid: false, reason: 'Select a mode' };
   if (mode === 'Online') return { mode, dateStatusIso: null, valid: true };
 
+  // Offline: dateStatus is already an ISO 8601 string from the picker.
   if (!dateStatus) return { mode, valid: false, reason: 'Provide a past DateStatus' };
   const dt = new Date(dateStatus);
   if (Number.isNaN(dt.getTime())) return { mode, valid: false, reason: 'Invalid date' };
   if (dt.getTime() >= Date.now()) {
     return { mode, valid: false, reason: 'DateStatus must be strictly in the past' };
   }
-  return { mode, dateStatusIso: dt.toISOString(), valid: true };
+  return { mode, dateStatusIso: dateStatus, valid: true };
 }
