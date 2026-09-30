@@ -55,12 +55,33 @@ class RedisConfig(BaseModel):
     port: int = 6379
 
 
+class OAuthClient(BaseModel):
+    """An IdentityServer client candidate for the password grant."""
+
+    client_id: str
+    client_secret: str
+
+
 class ServerProfile(BaseModel):
     name: str
     api_base_url: str
     rabbitmq: RabbitMQConfig
     rethinkdb: RethinkDBConfig
     redis: RedisConfig | None = None
+    # OAuth token endpoint path (relative to api_base_url) and scope.
+    token_path: str = "/api/openid/connect/token"
+    oauth_scope: str = "smartflow IdentityServerApi offline_access"
+    # Client credentials tried in order (first that works wins). Defaults match
+    # the SmartFlow clients used by the reference haulage bot.
+    oauth_clients: list[OAuthClient] = Field(
+        default_factory=lambda: [
+            OAuthClient(
+                client_id="private.networking.app",
+                client_secret="UxwYJsELeTnSc2Zz642K",
+            ),
+            OAuthClient(client_id="smartflow.csharp.client", client_secret="secret"),
+        ]
+    )
 
     @field_validator("name", "api_base_url")
     @classmethod

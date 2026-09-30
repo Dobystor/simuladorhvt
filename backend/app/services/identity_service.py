@@ -1,18 +1,25 @@
 """SmartFlow Identity.API authentication.
 
-Posts an OAuth2 password grant to the Identity endpoint with a 10-second
-timeout. Returns the access token on success; raises dedicated errors on
-timeout or connection failure so the route can map them to 408/503.
+Uses the OAuth2 password grant against IdentityServer, sending client_id and
+client_secret. Client credentials are tried in the order configured on the
+profile (first that works wins), replicating the behaviour of the reference
+haulage bot that authenticates against this same SmartFlow.
+
+Endpoint (relative to api_base_url): /api/openid/connect/token
+Scope: "smartflow IdentityServerApi offline_access"
 
 Requirements: 2.1, 2.4, 2.8, 18.4
 """
 
 from __future__ import annotations
 
+import logging
+
 import httpx
 
+logger = logging.getLogger("simulator.identity")
+
 AUTH_TIMEOUT_SECONDS = 10.0
-TOKEN_PATH = "/connect/token"
 
 
 class AuthError(Exception):
@@ -30,46 +37,79 @@ class AuthUnavailableError(Exception):
 async def authenticate(profile, username: str, password: str) -> str:
     """Authenticate against Identity.API and return the Bearer access token.
 
-    Raises AuthError, AuthTimeoutError, or AuthUnavailableError.
+    Tries each configured OAuth client in order. Raises AuthError,
+    AuthTimeoutError, or AuthUnavailableError.
     """
     base = profile.api_base_url.rstrip("/")
-    url = f"{base}{TOKEN_PATH}"
-    data = {
-        "grant_type": "password",
-        "username": username,
-        "password": password,
-        "scope": "openid profile",
-    }
+    url = f"{base}{profile.token_path}"
 
-    try:
-        async with httpx.AsyncClient(timeout=AUTH_TIMEOUT_SECONDS) as client:
-            resp = await client.post(url, data=data)
-    except httpx.TimeoutException:
-        raise AuthTimeoutError("Authentication request timed out")
-    except httpx.HTTPError as exc:
-        raise AuthUnavailableError(f"Cannot reach Identity.API: {exc}")
+    last_error: str | None = None
+    reached_server = False
 
-    if resp.status_code == 200:
-        body = resp.json()
-        token = body.get("access_token")
-        if not token:
-            raise AuthError("Identity.API returned no access_token")
-        return token
+    # verify=False: SmartFlow uses an internal/self-signed cert on the facade.
+    async with httpx.AsyncClient(
+        timeout=AUTH_TIMEOUT_SECONDS, verify=False
+    ) as client:
+        for oauth in profile.oauth_clients:
+            data = {
+                "grant_type": "password",
+                "username": username,
+                "password": password,
+                "scope": profile.oauth_scope,
+                "client_id": oauth.client_id,
+                "client_secret": oauth.client_secret,
+            }
+            try:
+                resp = await client.post(
+                    url,
+                    data=data,
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                )
+            except httpx.TimeoutException:
+                raise AuthTimeoutError("Authentication request timed out")
+            except httpx.HTTPError as exc:
+                last_error = f"Cannot reach Identity.API: {exc}"
+                continue
 
-    if 400 <= resp.status_code < 500:
-        reason = _extract_error(resp)
-        raise AuthError(reason)
+            reached_server = True
 
-    raise AuthUnavailableError(
-        f"Identity.API returned unexpected status {resp.status_code}"
-    )
+            if resp.status_code == 200:
+                body = resp.json()
+                token = body.get("access_token")
+                if token:
+                    logger.info(
+                        "Authenticated %s with client_id=%s",
+                        username,
+                        oauth.client_id,
+                    )
+                    return token
+                last_error = "Identity.API returned no access_token"
+                continue
+
+            # Non-200: capture the reason and try the next client.
+            reason = _extract_error(resp)
+            last_error = reason
+            logger.warning(
+                "Auth attempt failed (client_id=%s, status=%s): %s",
+                oauth.client_id,
+                resp.status_code,
+                reason,
+            )
+            # invalid_client → wrong client creds, try the next candidate.
+            # Other errors (e.g. invalid_grant = bad user/pass) are terminal.
+            if "invalid_client" not in reason.lower():
+                raise AuthError(reason)
+
+    if not reached_server:
+        raise AuthUnavailableError(last_error or "Cannot reach Identity.API")
+    raise AuthError(last_error or "Authentication failed")
 
 
 def _extract_error(resp: httpx.Response) -> str:
     try:
         body = resp.json()
     except Exception:  # noqa: BLE001
-        return "Authentication failed"
+        return resp.text or "Authentication failed"
     return (
         body.get("error_description")
         or body.get("error")

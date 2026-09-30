@@ -32,7 +32,10 @@ async def post_location_unload(
     headers = {"Authorization": f"Bearer {bearer_token}"}
 
     try:
-        async with httpx.AsyncClient(timeout=WRAPPER_TIMEOUT_SECONDS) as client:
+        # verify=False: SmartFlow facade uses an internal/self-signed certificate.
+        async with httpx.AsyncClient(
+            timeout=WRAPPER_TIMEOUT_SECONDS, verify=False
+        ) as client:
             resp = await client.post(url, json=payload, headers=headers)
     except httpx.TimeoutException:
         raise WrapperAPIError("Wrapper.API request timed out")

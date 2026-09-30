@@ -91,7 +91,8 @@ async def fetch_all_entities(profile, bearer_token: str) -> dict:
     base = profile.api_base_url.rstrip("/")
     errors: dict[str, str] = {}
 
-    async with httpx.AsyncClient() as client:
+    # verify=False: SmartFlow facade uses an internal/self-signed certificate.
+    async with httpx.AsyncClient(verify=False) as client:
         tasks = {
             key: asyncio.create_task(
                 _get_json(client, base, path, bearer_token)

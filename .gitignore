@@ -68,3 +68,6 @@ Thumbs.db
 .vscode/
 *.swp
 *~
+
+# Reference project (not part of this repo)
+_ref_haulage_bot/
