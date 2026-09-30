@@ -75,8 +75,9 @@ class Monitor:
         self._connection = await aio_pika.connect_robust(self._amqp_url())
         channel = await self._connection.channel()
         await channel.set_qos(prefetch_count=10)
+        # Must match SmartFlow's existing exchange declaration (durable=false).
         exchange = await channel.declare_exchange(
-            EXCHANGE_NAME, aio_pika.ExchangeType.DIRECT, durable=True
+            EXCHANGE_NAME, aio_pika.ExchangeType.DIRECT, durable=False
         )
         queue = await channel.declare_queue(self.queue_name, durable=True)
         await queue.bind(exchange, routing_key=ROUTING_KEY)

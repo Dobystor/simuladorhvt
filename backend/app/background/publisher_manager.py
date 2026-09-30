@@ -83,8 +83,10 @@ class PublisherManager:
     async def _connect(self) -> None:
         self._connection = await aio_pika.connect_robust(self._amqp_url())
         self._channel = await self._connection.channel()
+        # SmartFlow declares this exchange as durable=false; we must match it
+        # exactly or RabbitMQ rejects the channel with PRECONDITION_FAILED.
         self._exchange = await self._channel.declare_exchange(
-            EXCHANGE_NAME, aio_pika.ExchangeType.DIRECT, durable=True
+            EXCHANGE_NAME, aio_pika.ExchangeType.DIRECT, durable=False
         )
         self._ready.set()
 
