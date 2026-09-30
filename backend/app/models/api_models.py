@@ -65,13 +65,13 @@ class HaulageSiteInfo(BaseModel):
     id: int
     name: str
     type: str
-    reference_point_id: int
+    reference_point_id: int | None = None
 
 
 class WeighingMachineInfo(BaseModel):
     id: int
     name: str
-    reference_point_id: int
+    reference_point_id: int | None = None
     rethinkdb_id: str
     simulated_enabled: bool = False
 

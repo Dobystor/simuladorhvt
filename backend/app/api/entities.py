@@ -46,13 +46,22 @@ def _build_response(raw: dict) -> EntitiesResponse:
     beacons_norm = [
         entity_service.normalize_beacon(b) for b in (raw.get("beacons") or [])
     ]
+    # Drop sites/machines without a reference point — they can't map to a beacon.
     sites_norm = [
-        entity_service.normalize_haulage_site(s)
-        for s in (raw.get("haulage_sites") or [])
+        s
+        for s in (
+            entity_service.normalize_haulage_site(s)
+            for s in (raw.get("haulage_sites") or [])
+        )
+        if s["reference_point_id"] is not None
     ]
     wms_norm = [
-        entity_service.normalize_weighing_machine(w)
-        for w in (raw.get("weighing_machines") or [])
+        w
+        for w in (
+            entity_service.normalize_weighing_machine(w)
+            for w in (raw.get("weighing_machines") or [])
+        )
+        if w["reference_point_id"] is not None
     ]
 
     hv_ids = entity_service.haulage_vehicle_ids(raw.get("haulage_vehicles") or [])
@@ -119,7 +128,7 @@ def _haulage_site(s: dict) -> HaulageSiteInfo:
         id=s["id"],
         name=s.get("name", ""),
         type=str(s.get("type", "")),
-        reference_point_id=s.get("reference_point_id", 0),
+        reference_point_id=s.get("reference_point_id"),
     )
 
 
@@ -127,7 +136,7 @@ def _weighing_machine(w: dict) -> WeighingMachineInfo:
     return WeighingMachineInfo(
         id=w["id"],
         name=w.get("name", ""),
-        reference_point_id=w.get("reference_point_id", 0),
+        reference_point_id=w.get("reference_point_id"),
         rethinkdb_id=str(w.get("rethinkdb_id", "")),
         simulated_enabled=bool(w.get("simulated_enabled", False)),
     )
