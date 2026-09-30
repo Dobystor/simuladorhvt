@@ -1,0 +1,55 @@
+# systemd unit for the Haulage Event Simulator.
+#
+# Install:
+#   sudo cp deploy/haulage-simulator.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now haulage-simulator
+#
+# Adjust the paths, User, and Group below to match your deployment.
+# The default assumes the app is deployed at /opt/haulage-event-simulator and
+# runs as the "haulage" user.
+
+[Unit]
+Description=Haulage Event Simulator
+Documentation=file:/opt/haulage-event-simulator/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=haulage
+Group=haulage
+
+# Root of the deployed project (contains backend/ and config.yaml).
+WorkingDirectory=/opt/haulage-event-simulator/backend
+
+# Path to the config file and the SQLite audit database.
+Environment=SIMULATOR_CONFIG=/opt/haulage-event-simulator/config.yaml
+Environment=SIMULATOR_DB=/opt/haulage-event-simulator/data/simulator.sqlite
+
+# Run uvicorn from the project's virtualenv. Bind to all interfaces on 8000.
+ExecStart=/opt/haulage-event-simulator/backend/.venv/bin/uvicorn app.main:app \
+    --host 0.0.0.0 --port 8000
+
+# Restart on failure with a short delay (keeps the Monitor running 24/7).
+Restart=always
+RestartSec=5
+
+# Stop signal and grace period for a clean asyncio shutdown.
+KillSignal=SIGINT
+TimeoutStopSec=30
+
+# Logging goes to the journal (view with: journalctl -u haulage-simulator -f).
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=haulage-simulator
+
+# --- Hardening (optional but recommended) ---
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+# The data directory must remain writable for the SQLite database.
+ReadWritePaths=/opt/haulage-event-simulator/data
+
+[Install]
+WantedBy=multi-user.target

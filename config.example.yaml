@@ -1,0 +1,29 @@
+# config.example.yaml
+# Copy this file to config.yaml and fill in real connection parameters.
+# All fields are required unless marked optional.
+server_profiles:
+  - name: "Production"                   # unique; also used as the Monitor queue suffix
+    api_base_url: "https://prod.example.com"
+    rabbitmq:
+      host: "prod-rabbit.example.com"
+      port: 5672                         # optional, default 5672
+      username: "smartflow"
+      password: "secret"
+      vhost: "/"                         # optional, default "/"
+    rethinkdb:
+      host: "prod-rethink.example.com"
+      port: 28015                        # optional, default 28015
+    redis:                               # optional — not used by the simulator currently
+      host: "prod-redis.example.com"
+      port: 6379
+  - name: "Staging"
+    api_base_url: "https://staging.example.com"
+    rabbitmq:
+      host: "staging-rabbit.example.com"
+      port: 5672
+      username: "smartflow"
+      password: "secret"
+      vhost: "/"
+    rethinkdb:
+      host: "staging-rethink.example.com"
+      port: 28015
