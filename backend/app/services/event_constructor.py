@@ -129,7 +129,17 @@ def validate_offline_date_status(date_status: datetime, now: datetime) -> bool:
 
 
 def _iso_utc(dt: datetime) -> str:
-    return dt.astimezone(timezone.utc).isoformat()
+    """Serialize a datetime as UTC ISO 8601 with a trailing 'Z'.
+
+    Haulages.API (.NET) calls ConvertTimeFromUtc on DateStatus, which requires
+    DateTimeKind.Utc. A '+00:00' offset is parsed as non-UTC by .NET and throws;
+    the 'Z' suffix marks the value as UTC. Emit 'Z' instead of '+00:00'.
+    """
+    return (
+        dt.astimezone(timezone.utc)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def construct_haulage_event(
