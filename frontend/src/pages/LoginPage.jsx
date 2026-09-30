@@ -5,8 +5,10 @@ export default function LoginPage() {
   return (
     <div className="login-wrap">
       <div className="panel">
-        <h2 style={{ marginTop: 0 }}>Haulage Event Simulator</h2>
-        <p className="muted">Select a server and sign in with your SmartFlow credentials.</p>
+        <h1 className="login-title">Haulage Simulator</h1>
+        <p className="muted" style={{ marginBottom: 24 }}>
+          Select a server and sign in with your SmartFlow credentials.
+        </p>
         <ProfileSelector />
         <LoginForm />
       </div>
