@@ -3,6 +3,9 @@
 # Redeploy an updated build to an existing installation and restart the service.
 # Preserves config.yaml and the data/ directory (SQLite database).
 #
+# IMPORTANT: run as your NORMAL user (NOT sudo). The frontend build uses your
+# user-level Node (fnm/nvm); sudo is called only for the system steps.
+#
 # Usage:
 #   ./deploy/update.sh
 #
@@ -19,8 +22,16 @@ SERVICE_NAME="haulage-simulator"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+if [ "$(id -u)" -eq 0 ]; then
+  echo "ERROR: do not run this script with sudo/root. Run as your normal user."
+  exit 1
+fi
+
 echo "==> Rebuilding frontend"
-(cd "$PROJECT_ROOT/frontend" && pnpm install --frozen-lockfile || pnpm install && pnpm run build)
+pushd "$PROJECT_ROOT/frontend" >/dev/null
+pnpm install --frozen-lockfile || pnpm install
+pnpm run build
+popd >/dev/null
 
 echo "==> Syncing backend and built SPA (config.yaml and data/ preserved)"
 sudo rsync -a --delete \
