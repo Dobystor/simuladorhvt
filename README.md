@@ -48,7 +48,8 @@ variable (defaults to `config.yaml` in the working directory).
 ## Prerequisites
 
 - Python 3.11+ (tested on 3.13)
-- Node.js 18+ and pnpm
+- Node.js 18+ (Vite 6 and pnpm require it; distro packages are often too old —
+  install Node 20 LTS via NodeSource) and pnpm
 
 ## Backend setup
 

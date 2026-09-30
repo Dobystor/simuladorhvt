@@ -27,7 +27,18 @@ echo "==> Deploy target: $APP_DIR (user: $APP_USER)"
 
 # --- 1. Prerequisites check ---------------------------------------------------
 command -v python3 >/dev/null || { echo "python3 is required"; exit 1; }
-command -v node >/dev/null    || { echo "node is required"; exit 1; }
+command -v node >/dev/null    || { echo "node is required (v18+)"; exit 1; }
+
+# Vite 6 and pnpm require Node 18 or newer. Fail early with a clear message.
+NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
+if [ "$NODE_MAJOR" -lt 18 ]; then
+  echo "ERROR: Node.js v18+ is required, but found $(node --version)."
+  echo "Install a modern Node (e.g. Node 20 LTS) via NodeSource:"
+  echo "  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -"
+  echo "  sudo apt install -y nodejs"
+  exit 1
+fi
+
 if ! command -v pnpm >/dev/null; then
   echo "pnpm not found; installing via npm..."
   sudo npm install -g pnpm
