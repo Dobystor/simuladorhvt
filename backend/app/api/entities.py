@@ -28,44 +28,51 @@ router = APIRouter()
 
 
 def _build_response(raw: dict) -> EntitiesResponse:
-    """Map raw SmartFlow payloads into filtered, typed entities.
+    """Normalize raw SmartFlow payloads, filter, and return typed entities.
 
     The raw dict has keys vehicles, haulage_vehicles, employees, beacons,
     haulage_sites, weighing_machines (any may be None on failure) plus errors.
+    Raw payloads use SmartFlow casing; entity_service normalizes them first.
     """
     errors = dict(raw.get("errors", {}))
 
-    vehicles_raw = raw.get("vehicles") or []
-    haulage_vehicles_raw = raw.get("haulage_vehicles") or []
-    employees_raw = raw.get("employees") or []
-    beacons_raw = raw.get("beacons") or []
-    haulage_sites_raw = raw.get("haulage_sites") or []
-    weighing_machines_raw = raw.get("weighing_machines") or []
+    # Normalize each raw list to snake_case (skip entities that failed to load).
+    vehicles_norm = [
+        entity_service.normalize_vehicle(v) for v in (raw.get("vehicles") or [])
+    ]
+    employees_norm = [
+        entity_service.normalize_employee(e) for e in (raw.get("employees") or [])
+    ]
+    beacons_norm = [
+        entity_service.normalize_beacon(b) for b in (raw.get("beacons") or [])
+    ]
+    sites_norm = [
+        entity_service.normalize_haulage_site(s)
+        for s in (raw.get("haulage_sites") or [])
+    ]
+    wms_norm = [
+        entity_service.normalize_weighing_machine(w)
+        for w in (raw.get("weighing_machines") or [])
+    ]
 
-    haulage_vehicle_ids = {
-        hv.get("vehicle_id", hv.get("id")) for hv in haulage_vehicles_raw
-    }
+    hv_ids = entity_service.haulage_vehicle_ids(raw.get("haulage_vehicles") or [])
     site_ref_ids = {
-        s.get("reference_point_id")
-        for s in haulage_sites_raw
-        if s.get("reference_point_id") is not None
+        s["reference_point_id"] for s in sites_norm if s["reference_point_id"] is not None
     }
     wm_ref_ids = {
-        w.get("reference_point_id")
-        for w in weighing_machines_raw
-        if w.get("reference_point_id") is not None
+        w["reference_point_id"] for w in wms_norm if w["reference_point_id"] is not None
     }
 
-    vehicles = entity_service.filter_vehicles(vehicles_raw, haulage_vehicle_ids)
-    employees = entity_service.filter_employees(employees_raw)
-    beacons = entity_service.filter_beacons(beacons_raw, site_ref_ids, wm_ref_ids)
+    vehicles = entity_service.filter_vehicles(vehicles_norm, hv_ids)
+    employees = entity_service.filter_employees(employees_norm)
+    beacons = entity_service.filter_beacons(beacons_norm, site_ref_ids, wm_ref_ids)
 
     return EntitiesResponse(
         vehicles=[_vehicle(v) for v in vehicles],
         employees=[_employee(e) for e in employees],
         beacons=[_beacon(b) for b in beacons],
-        haulage_sites=[_haulage_site(s) for s in haulage_sites_raw],
-        weighing_machines=[_weighing_machine(w) for w in weighing_machines_raw],
+        haulage_sites=[_haulage_site(s) for s in sites_norm],
+        weighing_machines=[_weighing_machine(w) for w in wms_norm],
         errors=errors,
     )
 
