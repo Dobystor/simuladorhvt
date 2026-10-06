@@ -24,9 +24,19 @@ export default function SimulatePage() {
   const active = TABS.find((t) => t.key === tab);
   const props = { entities, errors, reload };
 
+  const counts = `${entities.vehicles.length} vehicles · ${entities.beacons.length} beacons · ${entities.employees.length} operators`;
+
   return (
     <div>
-      <h2>Simulate events</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h2 style={{ margin: 0 }}>Simulate events</h2>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <span className="muted" style={{ fontSize: 12 }}>{counts}</span>
+          <button onClick={reload} disabled={loading} title="Reload catalogs from SmartFlow">
+            {loading ? 'Syncing…' : '↻ Sync catalogs'}
+          </button>
+        </div>
+      </div>
       {loading && <p className="muted">Loading entities…</p>}
 
       <div className="tabs">

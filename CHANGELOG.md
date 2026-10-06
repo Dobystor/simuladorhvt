@@ -158,6 +158,13 @@ diseño asumía y el comportamiento real del servidor. Cada una se corrigió:
   `frontend/src/components/simulate/EntitySelectors.jsx`,
   `frontend/src/components/simulate/useResolvedMacs.js`
 
+### 15. `feat` — Botón "Sync catalogs"
+- **Qué**: botón en la página de simulación que recarga vehículos, beacons y
+  operadores desde SmartFlow (vía `POST /api/entities/reload`), más un contador
+  de entidades cargadas. Útil cuando se crean entidades nuevas en SmartFlow.
+- **Motivo**: solicitado — poder refrescar el catálogo sin re-loguearse.
+- **Archivos**: `frontend/src/pages/SimulatePage.jsx`
+
 ## Pendientes / solicitados
 
 _(ninguno pendiente por ahora — se irán agregando aquí conforme los pidas)_
