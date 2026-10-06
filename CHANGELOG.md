@@ -165,6 +165,15 @@ diseño asumía y el comportamiento real del servidor. Cada una se corrigió:
 - **Motivo**: solicitado — poder refrescar el catálogo sin re-loguearse.
 - **Archivos**: `frontend/src/pages/SimulatePage.jsx`
 
+### 16. `feat` — Selectores con buscador
+- **Qué**: nuevo componente `SearchableSelect` (combobox con búsqueda al
+  escribir, tema oscuro). Reemplaza los `<select>` nativos de vehículo, beacon,
+  operador y sitio en los paneles de simulación.
+- **Motivo**: solicitado — con muchas entidades, filtrar escribiendo es más ágil.
+- **Archivos**: `frontend/src/components/SearchableSelect.jsx`,
+  `frontend/src/components/simulate/EntitySelectors.jsx`,
+  `frontend/src/components/simulate/LocationUnloadPanel.jsx`
+
 ## Pendientes / solicitados
 
 _(ninguno pendiente por ahora — se irán agregando aquí conforme los pidas)_

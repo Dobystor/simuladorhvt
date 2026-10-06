@@ -1,4 +1,5 @@
 import { useAppStore } from '../../store/appStore';
+import SearchableSelect from '../SearchableSelect';
 
 /**
  * Each entity field (Vehicle, Beacon, Operator) has its own toggle between
@@ -56,20 +57,18 @@ export default function EntitySelectors({
             />
           ) : (
             <>
-              <select
+              <SearchableSelect
+                placeholder="— Select vehicle —"
                 value={selectedVehicle?.id ?? ''}
-                onChange={(e) => {
-                  const v = entities.vehicles.find((x) => String(x.id) === e.target.value);
+                options={entities.vehicles.map((v) => ({
+                  value: v.id,
+                  label: `${v.name} (type ${v.type})${v.has_tag ? '' : ' — ⚠ NO TAG'}`,
+                }))}
+                onChange={(val) => {
+                  const v = entities.vehicles.find((x) => String(x.id) === String(val));
                   setField('selectedVehicle', v || null);
                 }}
-              >
-                <option value="">— Select vehicle —</option>
-                {entities.vehicles.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.name} (type {v.type}){v.has_tag ? '' : ' — ⚠ NO TAG'}
-                  </option>
-                ))}
-              </select>
+              />
               {selectedVehicle && selectedVehicle.has_tag === false && (
                 <div className="error">This vehicle has no assigned tag (no MAC).</div>
               )}
@@ -91,20 +90,18 @@ export default function EntitySelectors({
                 onChange={(e) => setField('manualMacBeacon', e.target.value)}
               />
             ) : (
-              <select
+              <SearchableSelect
+                placeholder="— Select beacon —"
                 value={selectedBeacon?.id ?? ''}
-                onChange={(e) => {
-                  const b = beacons.find((x) => String(x.id) === e.target.value);
+                options={beacons.map((b) => ({
+                  value: b.id,
+                  label: `${b.name} (${b.mac})`,
+                }))}
+                onChange={(val) => {
+                  const b = beacons.find((x) => String(x.id) === String(val));
                   setField('selectedBeacon', b || null);
                 }}
-              >
-                <option value="">— Select beacon —</option>
-                {beacons.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name} ({b.mac})
-                  </option>
-                ))}
-              </select>
+              />
             )}
           </div>
         )}
@@ -123,20 +120,18 @@ export default function EntitySelectors({
                 onChange={(e) => setField('manualMacOperator', e.target.value)}
               />
             ) : (
-              <select
+              <SearchableSelect
+                placeholder="— None —"
                 value={selectedEmployee?.id ?? ''}
-                onChange={(e) => {
-                  const emp = entities.employees.find((x) => String(x.id) === e.target.value);
+                options={entities.employees.map((emp) => ({
+                  value: emp.id,
+                  label: `${emp.name}${emp.has_tag ? '' : ' — ⚠ no tag'}`,
+                }))}
+                onChange={(val) => {
+                  const emp = entities.employees.find((x) => String(x.id) === String(val));
                   setField('selectedEmployee', emp || null);
                 }}
-              >
-                <option value="">— None —</option>
-                {entities.employees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.name}{emp.has_tag ? '' : ' — ⚠ no tag'}
-                  </option>
-                ))}
-              </select>
+              />
             )}
           </div>
         )}

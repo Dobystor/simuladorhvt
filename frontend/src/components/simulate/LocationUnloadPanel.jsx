@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAppStore } from '../../store/appStore';
+import SearchableSelect from '../SearchableSelect';
 import { usePublish } from './usePublish';
 import ResultBanner from './ResultBanner';
 
@@ -30,31 +31,27 @@ export default function LocationUnloadPanel({ entities }) {
       <div className="row">
         <div className="col">
           <label>Vehicle (type 4 or 5)</label>
-          <select
+          <SearchableSelect
+            placeholder="— Select vehicle —"
             value={vehicle?.id ?? ''}
-            onChange={(e) => {
-              const v = entities.vehicles.find((x) => String(x.id) === e.target.value);
+            options={entities.vehicles.map((v) => ({
+              value: v.id,
+              label: `${v.name} (type ${v.type})`,
+            }))}
+            onChange={(val) => {
+              const v = entities.vehicles.find((x) => String(x.id) === String(val));
               setField('selectedVehicle', v || null);
             }}
-          >
-            <option value="">— Select vehicle —</option>
-            {entities.vehicles.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.name} (type {v.type})
-              </option>
-            ))}
-          </select>
+          />
         </div>
         <div className="col">
           <label>Unload HaulageSite</label>
-          <select value={siteId} onChange={(e) => setSiteId(e.target.value)}>
-            <option value="">— Select site —</option>
-            {unloadSites.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
+          <SearchableSelect
+            placeholder="— Select site —"
+            value={siteId}
+            options={unloadSites.map((s) => ({ value: s.id, label: s.name }))}
+            onChange={(val) => setSiteId(String(val))}
+          />
         </div>
       </div>
       {vehicle && !type45 && (
