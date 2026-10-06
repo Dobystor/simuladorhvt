@@ -3,11 +3,12 @@ import { resolveTagMac } from './EntitySelectors';
 
 /**
  * Reactive hook that resolves vehicle/beacon/operator MACs from either the
- * manual inputs or the selected entities. Re-renders when any relevant piece of
- * state changes, so Publish buttons enable/disable correctly.
+ * manual inputs or the selected entities, per field independently.
  */
 export function useResolvedMacs() {
-  const manualMode = useAppStore((s) => s.manualMacEntry);
+  const manualVehicle = useAppStore((s) => s.manualVehicle);
+  const manualBeacon = useAppStore((s) => s.manualBeacon);
+  const manualOperator = useAppStore((s) => s.manualOperator);
   const manualMacVehicle = useAppStore((s) => s.manualMacVehicle);
   const manualMacBeacon = useAppStore((s) => s.manualMacBeacon);
   const manualMacOperator = useAppStore((s) => s.manualMacOperator);
@@ -17,39 +18,45 @@ export function useResolvedMacs() {
 
   const up = (s) => (s && s.trim() ? s.trim().toUpperCase() : null);
 
-  if (manualMode) {
-    return {
-      macVehicle: up(manualMacVehicle),
-      macBeacon: up(manualMacBeacon),
-      macOperator: up(manualMacOperator),
-      vehicle,
-      beacon,
-      employee,
-      manualMode,
-    };
+  // Vehicle MAC
+  let macVehicle;
+  if (manualVehicle) {
+    macVehicle = up(manualMacVehicle);
+  } else {
+    macVehicle =
+      vehicle?.mac?.toUpperCase() ||
+      resolveTagMac(vehicle?.smart_flow_tag) ||
+      null;
   }
 
-  const macVehicle =
-    vehicle?.mac?.toUpperCase() ||
-    vehicle?.mac_vehicle?.toUpperCase() ||
-    resolveTagMac(vehicle?.smart_flow_tag) ||
-    null;
+  // Beacon MAC
+  let macBeacon;
+  if (manualBeacon) {
+    macBeacon = up(manualMacBeacon);
+  } else {
+    macBeacon = beacon?.mac ? beacon.mac.toUpperCase() : null;
+  }
 
-  let macOperator = employee?.mac?.toUpperCase() || null;
-  if (!macOperator && employee) {
-    for (const t of employee.smart_flow_tags || []) {
-      const m = resolveTagMac(t);
-      if (m) { macOperator = m; break; }
+  // Operator MAC
+  let macOperator;
+  if (manualOperator) {
+    macOperator = up(manualMacOperator);
+  } else {
+    macOperator = employee?.mac?.toUpperCase() || null;
+    if (!macOperator && employee) {
+      for (const t of employee.smart_flow_tags || []) {
+        const m = resolveTagMac(t);
+        if (m) { macOperator = m; break; }
+      }
     }
   }
 
   return {
     macVehicle,
-    macBeacon: beacon?.mac ? beacon.mac.toUpperCase() : null,
+    macBeacon,
     macOperator,
     vehicle,
     beacon,
     employee,
-    manualMode,
   };
 }

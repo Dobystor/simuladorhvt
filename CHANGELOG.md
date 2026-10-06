@@ -148,6 +148,16 @@ diseño asumía y el comportamiento real del servidor. Cada una se corrigió:
   `backend/app/api/simulate.py`, `backend/app/main.py`,
   `frontend/src/components/auth/ProfileSelector.jsx`
 
+### 14. `feat` — Toggle manual/catálogo por campo independiente
+- **Qué**: cada campo (Vehicle, Beacon, Operator) tiene su propio checkbox
+  "Manual" que alterna entre el dropdown del catálogo y un campo de texto para
+  escribir el MAC. Se pueden mezclar: ej. vehículo del catálogo + beacon manual.
+- **Motivo**: el toggle global anterior era todo-o-nada. El usuario pidió
+  poder elegir por campo.
+- **Archivos**: `frontend/src/store/appStore.js`,
+  `frontend/src/components/simulate/EntitySelectors.jsx`,
+  `frontend/src/components/simulate/useResolvedMacs.js`
+
 ## Pendientes / solicitados
 
 _(ninguno pendiente por ahora — se irán agregando aquí conforme los pidas)_

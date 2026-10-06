@@ -39,8 +39,10 @@ export const useAppStore = create((set, get) => ({
   simulationMode: null, // 'Online' | 'Offline'
   dateStatusInput: null,
 
-  // Manual MAC entry (overrides the dropdown selection when non-empty)
-  manualMacEntry: false,       // toggle: manual vs dropdown
+  // Manual MAC override per field (independent toggles)
+  manualVehicle: false,
+  manualBeacon: false,
+  manualOperator: false,
   manualMacVehicle: '',
   manualMacBeacon: '',
   manualMacOperator: '',

@@ -1,6 +1,9 @@
 import { useAppStore } from '../../store/appStore';
 
-// beaconFilter: optional (beacon) => bool to restrict the beacon dropdown.
+/**
+ * Each entity field (Vehicle, Beacon, Operator) has its own toggle between
+ * dropdown selection and manual MAC entry, so you can mix and match.
+ */
 export default function EntitySelectors({
   entities,
   errors,
@@ -9,12 +12,14 @@ export default function EntitySelectors({
   showEmployee = true,
   beaconFilter = null,
 }) {
+  const setField = useAppStore((s) => s.setSimulationFormField);
+
   const selectedVehicle = useAppStore((s) => s.selectedVehicle);
   const selectedBeacon = useAppStore((s) => s.selectedBeacon);
   const selectedEmployee = useAppStore((s) => s.selectedEmployee);
-  const setField = useAppStore((s) => s.setSimulationFormField);
-
-  const manualMode = useAppStore((s) => s.manualMacEntry);
+  const manualVehicle = useAppStore((s) => s.manualVehicle);
+  const manualBeacon = useAppStore((s) => s.manualBeacon);
+  const manualOperator = useAppStore((s) => s.manualOperator);
   const manualMacVehicle = useAppStore((s) => s.manualMacVehicle);
   const manualMacBeacon = useAppStore((s) => s.manualMacBeacon);
   const manualMacOperator = useAppStore((s) => s.manualMacOperator);
@@ -29,85 +34,63 @@ export default function EntitySelectors({
           <div>Some entities failed to load:</div>
           <ul style={{ margin: '6px 0' }}>
             {errorEntries.map(([type, msg]) => (
-              <li key={type}>
-                <strong>{type}</strong>: {msg}
-              </li>
+              <li key={type}><strong>{type}</strong>: {msg}</li>
             ))}
           </ul>
           <button onClick={reload}>Retry loading entities</button>
         </div>
       )}
 
-      {/* Manual MAC toggle */}
-      <div className="field" style={{ marginBottom: 14 }}>
-        <label style={{ display: 'flex', gap: 8, alignItems: 'center', textTransform: 'none' }}>
-          <input
-            type="checkbox"
-            checked={manualMode}
-            onChange={(e) => setField('manualMacEntry', e.target.checked)}
-            style={{ width: 'auto' }}
-          />
-          Enter MACs manually
-        </label>
-      </div>
-
-      {manualMode ? (
-        <div className="row">
-          <div className="col">
-            <label>Vehicle MAC</label>
+      <div className="row">
+        {/* ---- Vehicle ---- */}
+        <div className="col">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <label>Vehicle</label>
+            <FieldToggle checked={manualVehicle} onChange={(v) => setField('manualVehicle', v)} />
+          </div>
+          {manualVehicle ? (
             <input
-              placeholder="AA:BB:CC:DD:EE:FF"
+              placeholder="Vehicle MAC (AA:BB:CC:DD:EE:FF)"
               value={manualMacVehicle}
               onChange={(e) => setField('manualMacVehicle', e.target.value)}
             />
-          </div>
-          {showBeacon && (
-            <div className="col">
-              <label>Beacon MAC</label>
+          ) : (
+            <>
+              <select
+                value={selectedVehicle?.id ?? ''}
+                onChange={(e) => {
+                  const v = entities.vehicles.find((x) => String(x.id) === e.target.value);
+                  setField('selectedVehicle', v || null);
+                }}
+              >
+                <option value="">— Select vehicle —</option>
+                {entities.vehicles.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name} (type {v.type}){v.has_tag ? '' : ' — ⚠ NO TAG'}
+                  </option>
+                ))}
+              </select>
+              {selectedVehicle && selectedVehicle.has_tag === false && (
+                <div className="error">This vehicle has no assigned tag (no MAC).</div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* ---- Beacon ---- */}
+        {showBeacon && (
+          <div className="col">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label>Beacon</label>
+              <FieldToggle checked={manualBeacon} onChange={(v) => setField('manualBeacon', v)} />
+            </div>
+            {manualBeacon ? (
               <input
-                placeholder="AA:BB:CC:DD:EE:FF"
+                placeholder="Beacon MAC (AA:BB:CC:DD:EE:FF)"
                 value={manualMacBeacon}
                 onChange={(e) => setField('manualMacBeacon', e.target.value)}
               />
-            </div>
-          )}
-          {showEmployee && (
-            <div className="col">
-              <label>Operator MAC (optional)</label>
-              <input
-                placeholder="AA:BB:CC:DD:EE:FF"
-                value={manualMacOperator}
-                onChange={(e) => setField('manualMacOperator', e.target.value)}
-              />
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="row">
-          <div className="col">
-            <label>Vehicle</label>
-            <select
-              value={selectedVehicle?.id ?? ''}
-              onChange={(e) => {
-                const v = entities.vehicles.find((x) => String(x.id) === e.target.value);
-                setField('selectedVehicle', v || null);
-              }}
-            >
-              <option value="">— Select vehicle —</option>
-              {entities.vehicles.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.name} (type {v.type}){v.has_tag ? '' : ' — ⚠ NO TAG'}
-                </option>
-              ))}
-            </select>
-            {selectedVehicle && selectedVehicle.has_tag === false && (
-              <div className="error">This vehicle has no assigned tag (no MAC).</div>
-            )}
-          </div>
-
-          {showBeacon && (
-            <div className="col">
-              <label>Beacon</label>
+            ) : (
               <select
                 value={selectedBeacon?.id ?? ''}
                 onChange={(e) => {
@@ -122,12 +105,24 @@ export default function EntitySelectors({
                   </option>
                 ))}
               </select>
-            </div>
-          )}
+            )}
+          </div>
+        )}
 
-          {showEmployee && (
-            <div className="col">
+        {/* ---- Operator ---- */}
+        {showEmployee && (
+          <div className="col">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label>Operator (optional)</label>
+              <FieldToggle checked={manualOperator} onChange={(v) => setField('manualOperator', v)} />
+            </div>
+            {manualOperator ? (
+              <input
+                placeholder="Operator MAC (AA:BB:CC:DD:EE:FF)"
+                value={manualMacOperator}
+                onChange={(e) => setField('manualMacOperator', e.target.value)}
+              />
+            ) : (
               <select
                 value={selectedEmployee?.id ?? ''}
                 onChange={(e) => {
@@ -142,52 +137,37 @@ export default function EntitySelectors({
                   </option>
                 ))}
               </select>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-// ---- MAC resolution helpers (consider manual entry first) ----
-
-function manual(field) {
-  return useAppStore.getState()[field]?.trim().toUpperCase() || null;
+/** Small toggle label for "Manual" per field. */
+function FieldToggle({ checked, onChange }) {
+  return (
+    <label style={{
+      display: 'flex', gap: 5, alignItems: 'center',
+      fontSize: 11, color: 'var(--text-dim)', cursor: 'pointer',
+      textTransform: 'none', letterSpacing: 0, fontWeight: 400,
+    }}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        style={{ width: 'auto' }}
+      />
+      Manual
+    </label>
+  );
 }
 
+// ---- MAC resolution helper (exported for useResolvedMacs) ----
 export function resolveTagMac(tag) {
   if (!tag) return null;
   if (tag.swarm_id) return tag.swarm_id.toUpperCase();
   if (tag.bluetooth_address) return tag.bluetooth_address.toUpperCase();
-  return null;
-}
-
-export function vehicleMac(vehicle) {
-  const state = useAppStore.getState();
-  if (state.manualMacEntry) return manual('manualMacVehicle');
-  if (!vehicle) return null;
-  if (vehicle.mac) return vehicle.mac.toUpperCase();
-  if (vehicle.mac_vehicle) return vehicle.mac_vehicle.toUpperCase();
-  return resolveTagMac(vehicle.smart_flow_tag);
-}
-
-export function beaconMac(beacon) {
-  const state = useAppStore.getState();
-  if (state.manualMacEntry) return manual('manualMacBeacon');
-  if (!beacon) return null;
-  return beacon.mac ? beacon.mac.toUpperCase() : null;
-}
-
-export function employeeMac(employee) {
-  const state = useAppStore.getState();
-  if (state.manualMacEntry) return manual('manualMacOperator');
-  if (!employee) return null;
-  if (employee.mac) return employee.mac.toUpperCase();
-  const tags = employee.smart_flow_tags || [];
-  for (const t of tags) {
-    const mac = resolveTagMac(t);
-    if (mac) return mac;
-  }
   return null;
 }
