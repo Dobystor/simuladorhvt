@@ -174,6 +174,14 @@ diseño asumía y el comportamiento real del servidor. Cada una se corrigió:
   `frontend/src/components/simulate/EntitySelectors.jsx`,
   `frontend/src/components/simulate/LocationUnloadPanel.jsx`
 
+### 17. `feat` — EventId fijo (700) en Online, consecutivo en Offline
+- **Qué**: los eventos Online ahora siempre llevan `EventId="700"` (como el
+  hardware en vivo). Los Offline mantienen EventIds consecutivos (1, 2, 3…) para
+  que Haulages.API ordene correctamente la secuencia histórica reconstruida.
+- **Motivo**: solicitado por el usuario para igualar el comportamiento del
+  hardware real en tiempo real.
+- **Archivos**: `backend/app/services/event_constructor.py`
+
 ## Pendientes / solicitados
 
 _(ninguno pendiente por ahora — se irán agregando aquí conforme los pidas)_

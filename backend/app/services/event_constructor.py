@@ -19,6 +19,8 @@ from app.models.event_models import (
 )
 from app.session_store import SessionData
 
+# Fixed EventId used for Online (real-time) events, matching live hardware.
+ONLINE_EVENT_ID = "700"
 # 18 hours expressed in seconds, used by the Unload 18-hour rule.
 EIGHTEEN_HOURS_SECONDS = 18 * 3600
 # Weight threshold (tonnes) separating a net load from a tare update.
@@ -164,6 +166,9 @@ def construct_haulage_event(
     if mode == "Online":
         real_time = True
         effective_date_status = now
+        # Online events are real-time (already ordered by publication time), so
+        # they always carry the fixed EventId used by live hardware.
+        event_id = ONLINE_EVENT_ID
     elif mode == "Offline":
         if date_status is None:
             raise ValueError("Offline mode requires a DateStatus value")
@@ -171,13 +176,16 @@ def construct_haulage_event(
             raise ValueError("Offline DateStatus must be strictly in the past")
         real_time = False
         effective_date_status = date_status
+        # Offline events reconstruct a historical sequence, so they need
+        # consecutive EventIds for Haulages.API to order them correctly.
+        event_id = next_event_id(session)
     else:
         raise ValueError(f"Unknown mode: {mode}")
 
     return HaulageVehicleIntegrationEvent(
         Id=str(uuid.uuid4()),
         CreationDate=_iso_utc(now),
-        EventId=next_event_id(session),
+        EventId=event_id,
         MACVehicle=mac_vehicle.upper(),
         Status=int(status),
         DateStatus=_iso_utc(effective_date_status),

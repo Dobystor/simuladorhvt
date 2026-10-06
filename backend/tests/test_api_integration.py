@@ -107,7 +107,7 @@ def test_login_and_simulate_load(client, monkeypatch):
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()
-    assert body["event_id"] == "1"
+    assert body["event_id"] == "700"  # Online events use the fixed EventId
     assert body["event_log_id"] >= 1
 
     # The published payload reached the fake publisher.
@@ -118,6 +118,7 @@ def test_login_and_simulate_load(client, monkeypatch):
     assert payload["MACVehicle"] == "AA:BB"
     assert payload["Status"] == 1
     assert payload["RealTime"] is True
+    assert payload["EventId"] == "700"
 
 
 def test_duplicate_rejected(client, monkeypatch):
@@ -161,6 +162,23 @@ def test_summary_first_login_uses_24h_window(client, monkeypatch):
     resp = client.get("/api/summary", headers=headers)
     assert resp.status_code == 200
     assert "since" in resp.json()
+
+
+def test_offline_uses_consecutive_event_ids(client, monkeypatch):
+    """Offline events get consecutive EventIds; Online always 700."""
+    token = _login(client, monkeypatch)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    r1 = client.post("/api/simulate/haulage", headers=headers, json={
+        "event_type": "Load", "mac_vehicle": "V1", "mac_beacon": "B1",
+        "mode": "Offline", "date_status": "2020-01-01T00:00:00Z",
+    })
+    r2 = client.post("/api/simulate/haulage", headers=headers, json={
+        "event_type": "Unload", "mac_vehicle": "V1", "mac_beacon": "B2",
+        "mode": "Offline", "date_status": "2020-01-01T01:00:00Z",
+    })
+    assert r1.json()["event_id"] == "1"
+    assert r2.json()["event_id"] == "2"
 
 
 def test_offline_accepts_z_suffix_iso(client, monkeypatch):
