@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app import app_state, database
+from app.api.servers import get_dynamic_profile
 from app.models.api_models import LoginRequest, LoginResponse
 from app.services import identity_service
 from app.session_store import (
@@ -22,10 +23,20 @@ from app.session_store import (
 router = APIRouter()
 
 
+def _resolve_profile(profile_name: str):
+    """Find a profile by name in config.yaml or dynamic servers."""
+    config = app_state.get_config()
+    if config:
+        p = config.get_profile(profile_name)
+        if p:
+            return p
+    return get_dynamic_profile(profile_name)
+
+
 @router.post("/login", response_model=LoginResponse)
 async def login(body: LoginRequest) -> LoginResponse:
     config = app_state.get_config()
-    profile = config.get_profile(body.profile_name) if config else None
+    profile = _resolve_profile(body.profile_name)
     if profile is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -12,6 +12,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 
 from app import app_state
+from app.api.servers import get_dynamic_profile
 from app.models.api_models import (
     BeaconInfo,
     EmployeeInfo,
@@ -153,7 +154,10 @@ def _weighing_machine(w: dict) -> WeighingMachineInfo:
 
 
 async def _load(session: SessionData) -> EntitiesResponse:
-    profile = app_state.get_config().get_profile(session.profile_name)
+    config = app_state.get_config()
+    profile = config.get_profile(session.profile_name) if config else None
+    if not profile:
+        profile = get_dynamic_profile(session.profile_name)
     raw = await entity_service.fetch_all_entities(profile, session.bearer_token)
 
     # If ALL entities failed with 401, the bearer expired — refresh and retry.

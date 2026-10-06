@@ -37,7 +37,7 @@ def client(tmp_path, monkeypatch):
     config = SimulatorConfig(server_profiles=[profile])
 
     # Prevent the lifespan from loading config / starting background tasks.
-    monkeypatch.setattr("app.main.load_config_or_exit", lambda: config)
+    monkeypatch.setattr("app.main.load_config", lambda: config)
     monkeypatch.setattr(
         "app.main.PublisherManager",
         lambda p: type(

@@ -19,10 +19,10 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app import app_state, database
-from app.api import auth, entities, history, profiles, simulate, summary
+from app.api import auth, entities, history, profiles, servers, simulate, summary
 from app.background.monitor import Monitor
 from app.background.publisher_manager import PublisherManager
-from app.config import load_config_or_exit
+from app.config import SimulatorConfig, load_config
 from app.websocket.endpoint import websocket_endpoint
 
 logging.basicConfig(level=logging.INFO)
@@ -38,7 +38,13 @@ _FRONTEND_DIST = os.path.join(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    config = load_config_or_exit()
+    # config.yaml is optional: if missing, the app starts with no static
+    # profiles and users add servers dynamically from the UI.
+    try:
+        config = load_config()
+    except Exception as exc:
+        logger.warning("No config.yaml loaded (%s); starting with dynamic profiles only.", exc)
+        config = SimulatorConfig(server_profiles=[])
     app_state.set_config(config)
 
     db_path = os.environ.get("SIMULATOR_DB", "simulator.sqlite")
@@ -62,6 +68,9 @@ async def lifespan(app: FastAPI):
         "Started %d monitor(s) and %d publisher(s)", len(monitors), len(publishers)
     )
 
+    # Start background tasks for dynamic (DB-stored) server profiles.
+    await servers.start_all_dynamic_profiles()
+
     try:
         yield
     finally:
@@ -79,6 +88,7 @@ def create_app() -> FastAPI:
 
     app.include_router(auth.router, prefix="/api/auth")
     app.include_router(profiles.router, prefix="/api")
+    app.include_router(servers.router, prefix="/api")
     app.include_router(entities.router, prefix="/api")
     app.include_router(simulate.router, prefix="/api/simulate")
     app.include_router(history.router, prefix="/api/history")

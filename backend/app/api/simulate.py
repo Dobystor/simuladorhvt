@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app import app_state, database
+from app.api.servers import get_dynamic_profile
 from app.background.publisher_manager import PublishError
 from app.models.api_models import (
     SimulateHaulageRequest,
@@ -165,7 +166,10 @@ async def simulate_haulage(
         )
 
     # Standard weighing: write RethinkDB weight BEFORE publishing (Req 9.4, 9.9).
-    profile = app_state.get_config().get_profile(session.profile_name)
+    config = app_state.get_config()
+    profile = config.get_profile(session.profile_name) if config else None
+    if not profile:
+        profile = get_dynamic_profile(session.profile_name)
     if body.event_type == "WeighingMachine" and body.weighing_mode == "Standard":
         try:
             await rethinkdb_service.write_weighing_machine_weight(
@@ -234,7 +238,10 @@ async def simulate_location_unload(
     body: SimulateLocationUnloadRequest,
     session: SessionData = Depends(get_current_session),
 ) -> SimulateLocationUnloadResponse:
-    profile = app_state.get_config().get_profile(session.profile_name)
+    config = app_state.get_config()
+    profile = config.get_profile(session.profile_name) if config else None
+    if not profile:
+        profile = get_dynamic_profile(session.profile_name)
     try:
         await wrapper_service.post_location_unload(
             profile, session.bearer_token, body.vehicle_id, body.reference_point_id

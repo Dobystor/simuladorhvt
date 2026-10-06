@@ -136,7 +136,17 @@ diseño asumía y el comportamiento real del servidor. Cada una se corrigió:
   `frontend/src/components/simulate/useResolvedMacs.js`,
   `frontend/src/components/simulate/{Load,Unload,Weighing,InTransitStop,OperatorAssign}Panel.jsx`
 
----
+### 13. `feat` — Servidores dinámicos desde la UI (multi-server)
+- **Qué**: se pueden agregar/eliminar servidores SmartFlow desde la pantalla de
+  login, sin editar `config.yaml`. Los servidores se guardan en SQLite
+  (`server_config`), y al agregarlos se arrancan automáticamente su Monitor y
+  Publisher. Al eliminarlos se detienen. `config.yaml` se vuelve opcional.
+- **Motivo**: el usuario quiere conectar a distintos servidores (ej. `.39` y
+  `.16`) desde un solo deployment, sin tocar archivos de configuración.
+- **Archivos**: `backend/app/database.py`, `backend/app/api/servers.py`,
+  `backend/app/api/auth.py`, `backend/app/api/entities.py`,
+  `backend/app/api/simulate.py`, `backend/app/main.py`,
+  `frontend/src/components/auth/ProfileSelector.jsx`
 
 ## Pendientes / solicitados
 

@@ -67,6 +67,22 @@ _DDL_STATEMENTS: list[str] = [
         PRIMARY KEY (username, server_profile)
     );
     """,
+    # Dynamic server profiles added from the UI (supplements config.yaml).
+    """
+    CREATE TABLE IF NOT EXISTS server_config (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        name            TEXT    NOT NULL UNIQUE,
+        api_url         TEXT    NOT NULL,
+        rabbitmq_host   TEXT    NOT NULL,
+        rabbitmq_port   INTEGER NOT NULL DEFAULT 5672,
+        rabbitmq_user   TEXT    NOT NULL DEFAULT 'smartflow',
+        rabbitmq_pass   TEXT    NOT NULL DEFAULT 'Sm4rtFl0wN3w',
+        rabbitmq_vhost  TEXT    NOT NULL DEFAULT '/',
+        rethinkdb_host  TEXT    NOT NULL,
+        rethinkdb_port  INTEGER NOT NULL DEFAULT 28115,
+        created_at      TEXT    NOT NULL
+    );
+    """,
 ]
 
 # Module-level path so helpers can open short-lived connections. Set by init_db.
@@ -255,3 +271,43 @@ async def find_recent_event_log_by_id(
         cursor = await db.execute(sql, (server_profile, cutoff, like))
         row = await cursor.fetchone()
     return row is not None
+
+
+# ---------------------------------------------------------------------------
+# Dynamic server_config CRUD
+# ---------------------------------------------------------------------------
+
+
+async def list_server_configs() -> list[dict]:
+    """Return all dynamic server profiles ordered by name."""
+    async with aiosqlite.connect(_db_path) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("SELECT * FROM server_config ORDER BY name;")
+        rows = await cursor.fetchall()
+    return [dict(row) for row in rows]
+
+
+async def insert_server_config(record: dict) -> int:
+    """Insert a server_config row and return its new id."""
+    cols = [
+        "name", "api_url", "rabbitmq_host", "rabbitmq_port", "rabbitmq_user",
+        "rabbitmq_pass", "rabbitmq_vhost", "rethinkdb_host", "rethinkdb_port",
+        "created_at",
+    ]
+    values = [record.get(c) for c in cols]
+    placeholders = ", ".join("?" for _ in cols)
+    sql = f"INSERT INTO server_config ({', '.join(cols)}) VALUES ({placeholders});"
+    async with aiosqlite.connect(_db_path) as db:
+        cursor = await db.execute(sql, values)
+        await db.commit()
+        return cursor.lastrowid
+
+
+async def delete_server_config(server_id: int) -> bool:
+    """Delete a server_config by id. Returns True if a row was deleted."""
+    async with aiosqlite.connect(_db_path) as db:
+        cursor = await db.execute(
+            "DELETE FROM server_config WHERE id = ?;", (server_id,)
+        )
+        await db.commit()
+        return cursor.rowcount > 0
