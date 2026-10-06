@@ -1,19 +1,16 @@
-"""SmartFlow Identity.API authentication.
+"""SmartFlow Identity.API authentication with token refresh.
 
-Uses the OAuth2 password grant against IdentityServer, sending client_id and
-client_secret. Client credentials are tried in the order configured on the
-profile (first that works wins), replicating the behaviour of the reference
-haulage bot that authenticates against this same SmartFlow.
+Uses the OAuth2 password grant for initial login, and refresh_token grant for
+transparent token renewal. Client credentials are tried in order (first that
+works wins), replicating the reference haulage bot.
 
-Endpoint (relative to api_base_url): /api/openid/connect/token
-Scope: "smartflow IdentityServerApi offline_access"
-
-Requirements: 2.1, 2.4, 2.8, 18.4
+Requirements: 2.1, 2.4, 2.5, 2.8
 """
 
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 
 import httpx
 
@@ -34,8 +31,16 @@ class AuthUnavailableError(Exception):
     """The Identity.API could not be reached (503)."""
 
 
-async def authenticate(profile, username: str, password: str) -> str:
-    """Authenticate against Identity.API and return the Bearer access token.
+@dataclass
+class AuthResult:
+    access_token: str
+    refresh_token: str
+    client_id: str
+    client_secret: str
+
+
+async def authenticate(profile, username: str, password: str) -> AuthResult:
+    """Authenticate against Identity.API and return tokens + winning client.
 
     Tries each configured OAuth client in order. Raises AuthError,
     AuthTimeoutError, or AuthUnavailableError.
@@ -46,7 +51,6 @@ async def authenticate(profile, username: str, password: str) -> str:
     last_error: str | None = None
     reached_server = False
 
-    # verify=False: SmartFlow uses an internal/self-signed cert on the facade.
     async with httpx.AsyncClient(
         timeout=AUTH_TIMEOUT_SECONDS, verify=False
     ) as client:
@@ -82,11 +86,15 @@ async def authenticate(profile, username: str, password: str) -> str:
                         username,
                         oauth.client_id,
                     )
-                    return token
+                    return AuthResult(
+                        access_token=token,
+                        refresh_token=body.get("refresh_token", ""),
+                        client_id=oauth.client_id,
+                        client_secret=oauth.client_secret,
+                    )
                 last_error = "Identity.API returned no access_token"
                 continue
 
-            # Non-200: capture the reason and try the next client.
             reason = _extract_error(resp)
             last_error = reason
             logger.warning(
@@ -95,14 +103,63 @@ async def authenticate(profile, username: str, password: str) -> str:
                 resp.status_code,
                 reason,
             )
-            # invalid_client → wrong client creds, try the next candidate.
-            # Other errors (e.g. invalid_grant = bad user/pass) are terminal.
             if "invalid_client" not in reason.lower():
                 raise AuthError(reason)
 
     if not reached_server:
         raise AuthUnavailableError(last_error or "Cannot reach Identity.API")
     raise AuthError(last_error or "Authentication failed")
+
+
+async def refresh_bearer_token(
+    profile, refresh_token: str, client_id: str, client_secret: str
+) -> AuthResult | None:
+    """Use a refresh_token to obtain a new bearer without re-authenticating.
+
+    Returns a new AuthResult on success, or None if the refresh failed (caller
+    should force re-login).
+    """
+    base = profile.api_base_url.rstrip("/")
+    url = f"{base}{profile.token_path}"
+
+    data = {
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token,
+        "client_id": client_id,
+        "client_secret": client_secret,
+    }
+
+    try:
+        async with httpx.AsyncClient(
+            timeout=AUTH_TIMEOUT_SECONDS, verify=False
+        ) as client:
+            resp = await client.post(
+                url,
+                data=data,
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Token refresh failed (network): %s", exc)
+        return None
+
+    if resp.status_code != 200:
+        logger.warning(
+            "Token refresh failed (%s): %s", resp.status_code, resp.text[:200]
+        )
+        return None
+
+    body = resp.json()
+    new_token = body.get("access_token")
+    if not new_token:
+        return None
+
+    logger.info("Token refreshed successfully for client_id=%s", client_id)
+    return AuthResult(
+        access_token=new_token,
+        refresh_token=body.get("refresh_token", refresh_token),
+        client_id=client_id,
+        client_secret=client_secret,
+    )
 
 
 def _extract_error(resp: httpx.Response) -> str:

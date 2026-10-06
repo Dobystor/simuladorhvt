@@ -22,6 +22,7 @@ from app.models.api_models import (
     WeighingMachineInfo,
 )
 from app.services import entity_service
+from app.services.token_refresh import refresh_session_token
 from app.session_store import SessionData, get_current_session
 
 router = APIRouter()
@@ -145,6 +146,16 @@ def _weighing_machine(w: dict) -> WeighingMachineInfo:
 async def _load(session: SessionData) -> EntitiesResponse:
     profile = app_state.get_config().get_profile(session.profile_name)
     raw = await entity_service.fetch_all_entities(profile, session.bearer_token)
+
+    # If ALL entities failed with 401, the bearer expired — refresh and retry.
+    errors = raw.get("errors", {})
+    all_unauthorized = errors and all(
+        "401" in str(v) for v in errors.values()
+    )
+    if all_unauthorized:
+        new_token = await refresh_session_token(session)  # raises 401 if refresh fails
+        raw = await entity_service.fetch_all_entities(profile, new_token)
+
     return _build_response(raw)
 
 

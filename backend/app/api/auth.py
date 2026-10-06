@@ -33,7 +33,7 @@ async def login(body: LoginRequest) -> LoginResponse:
         )
 
     try:
-        token = await identity_service.authenticate(
+        result = await identity_service.authenticate(
             profile, body.username, body.password
         )
     except identity_service.AuthTimeoutError as exc:
@@ -49,7 +49,10 @@ async def login(body: LoginRequest) -> LoginResponse:
             status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)
         )
 
-    session = create_session(body.username, body.profile_name, token)
+    session = create_session(body.username, body.profile_name, result.access_token)
+    session.refresh_token = result.refresh_token
+    session.client_id = result.client_id
+    session.client_secret = result.client_secret
 
     # Record last_seen; failure must not block login (Req 14.6).
     try:

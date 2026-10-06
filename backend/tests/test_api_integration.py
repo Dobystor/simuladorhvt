@@ -64,7 +64,10 @@ def client(tmp_path, monkeypatch):
 
 def _login(client, monkeypatch):
     def handler(request):
-        return httpx.Response(200, json={"access_token": "TOKEN"})
+        return httpx.Response(200, json={
+            "access_token": "TOKEN",
+            "refresh_token": "REFRESH",
+        })
 
     real_init = httpx.AsyncClient.__init__
 

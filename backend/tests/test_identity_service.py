@@ -39,11 +39,13 @@ def _patch_transport(monkeypatch, handler):
 
 async def test_authenticate_success_first_client(monkeypatch):
     def handler(request):
-        return httpx.Response(200, json={"access_token": "TOKEN123"})
+        return httpx.Response(200, json={"access_token": "TOKEN123", "refresh_token": "REF"})
 
     _patch_transport(monkeypatch, handler)
-    token = await identity_service.authenticate(_Profile(), "alice", "pw")
-    assert token == "TOKEN123"
+    result = await identity_service.authenticate(_Profile(), "alice", "pw")
+    assert result.access_token == "TOKEN123"
+    assert result.refresh_token == "REF"
+    assert result.client_id == "private.networking.app"
 
 
 async def test_authenticate_falls_back_to_second_client(monkeypatch):
@@ -54,11 +56,12 @@ async def test_authenticate_falls_back_to_second_client(monkeypatch):
         if calls["n"] == 1:
             # First client rejected as invalid_client -> should try the next.
             return httpx.Response(400, json={"error": "invalid_client"})
-        return httpx.Response(200, json={"access_token": "SECOND"})
+        return httpx.Response(200, json={"access_token": "SECOND", "refresh_token": "R2"})
 
     _patch_transport(monkeypatch, handler)
-    token = await identity_service.authenticate(_Profile(), "alice", "pw")
-    assert token == "SECOND"
+    result = await identity_service.authenticate(_Profile(), "alice", "pw")
+    assert result.access_token == "SECOND"
+    assert result.client_id == "smartflow.csharp.client"
     assert calls["n"] == 2
 
 

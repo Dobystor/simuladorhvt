@@ -22,6 +22,10 @@ class SessionData:
     username: str
     profile_name: str
     bearer_token: str
+    refresh_token: str = ""
+    # OAuth client credentials that worked during login — needed for refresh.
+    client_id: str = ""
+    client_secret: str = ""
     event_id_counter: int = 1
     published_combos: set = field(default_factory=set)
     created_at: datetime = field(
