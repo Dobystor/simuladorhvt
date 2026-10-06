@@ -1,15 +1,12 @@
-import { useAppStore } from '../../store/appStore';
-import EntitySelectors, { vehicleMac, employeeMac } from './EntitySelectors';
+import EntitySelectors from './EntitySelectors';
+import { useResolvedMacs } from './useResolvedMacs';
 import { usePublish } from './usePublish';
 import ResultBanner from './ResultBanner';
 
 export default function OperatorAssignPanel({ entities, errors, reload }) {
-  const vehicle = useAppStore((s) => s.selectedVehicle);
-  const employee = useAppStore((s) => s.selectedEmployee);
+  const { macVehicle, macOperator, vehicle, employee } = useResolvedMacs();
   const { result, busy, publish } = usePublish();
 
-  const macVehicle = vehicleMac(vehicle);
-  const macOperator = employeeMac(employee);
   const canPublish = macVehicle && macOperator && !busy;
 
   async function handlePublish() {
@@ -22,8 +19,8 @@ export default function OperatorAssignPanel({ entities, errors, reload }) {
   return (
     <div>
       <EntitySelectors entities={entities} errors={errors} reload={reload} showBeacon={false} />
-      {vehicle && !macVehicle && <div className="error">Vehicle has no addressable MAC.</div>}
-      {employee && !macOperator && <div className="error">Operator has no addressable MAC.</div>}
+      {vehicle && vehicle.has_tag === false && <div className="error">Vehicle has no addressable MAC.</div>}
+      {employee && employee.has_tag === false && <div className="error">Operator has no addressable MAC.</div>}
       <button className="primary" style={{ marginTop: 14 }} disabled={!canPublish} onClick={handlePublish}>
         Publish operator assignment
       </button>

@@ -39,12 +39,39 @@ SITE_TYPE_UNLOAD = 1
 
 
 def filter_vehicles(vehicles: list[dict], haulage_vehicle_ids: set[int]) -> list[dict]:
-    """Keep vehicles whose type is 4 or 5 AND that have a HaulageVehicle record."""
+    """Keep vehicles whose type is 4 or 5 AND that have a HaulageVehicle record.
+
+    Note: this does NOT filter by tag — vehicles without a tag are kept so the
+    UI can flag them (has_tag=False) instead of silently hiding them.
+    """
     return [
         v
         for v in vehicles
         if v.get("type") in {4, 5} and v.get("id") in haulage_vehicle_ids
     ]
+
+
+def resolve_vehicle_mac(vehicle: dict) -> str | None:
+    """Resolve a vehicle's MAC from its SmartFlowTag (uppercase), or None."""
+    tag = vehicle.get("smart_flow_tag") or {}
+    return _resolve_mac(tag.get("swarm_id"), tag.get("bluetooth_address"))
+
+
+def resolve_employee_mac(employee: dict) -> str | None:
+    """Resolve an employee's MAC from its first usable tag (uppercase)."""
+    for tag in employee.get("smart_flow_tags", []):
+        mac = _resolve_mac(tag.get("swarm_id"), tag.get("bluetooth_address"))
+        if mac:
+            return mac
+    return None
+
+
+def _resolve_mac(swarm_id: str | None, bluetooth_address: str | None) -> str | None:
+    if swarm_id:
+        return swarm_id.upper()
+    if bluetooth_address:
+        return bluetooth_address.upper()
+    return None
 
 
 def filter_employees(employees: list[dict]) -> list[dict]:

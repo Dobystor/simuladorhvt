@@ -73,8 +73,11 @@ def _build_response(raw: dict) -> EntitiesResponse:
         w["reference_point_id"] for w in wms_norm if w["reference_point_id"] is not None
     }
 
+    # Vehicles: keep type 4/5 with a HaulageVehicle record, INCLUDING those
+    # without a tag (flagged has_tag=False) so the UI can indicate them.
     vehicles = entity_service.filter_vehicles(vehicles_norm, hv_ids)
-    employees = entity_service.filter_employees(employees_norm)
+    # Employees: include all; the UI shows which have no tag.
+    employees = employees_norm
     beacons = entity_service.filter_beacons(beacons_norm, site_ref_ids, wm_ref_ids)
 
     return EntitiesResponse(
@@ -96,22 +99,28 @@ def _tag(t: dict | None) -> SmartFlowTagInfo | None:
 
 
 def _vehicle(v: dict) -> VehicleInfo:
+    mac = entity_service.resolve_vehicle_mac(v)
     return VehicleInfo(
         id=v["id"],
         name=v.get("name", ""),
         type=v.get("type", 0),
         empty_weight=v.get("empty_weight"),
         smart_flow_tag=_tag(v.get("smart_flow_tag")),
+        mac=mac,
+        has_tag=mac is not None,
     )
 
 
 def _employee(e: dict) -> EmployeeInfo:
+    mac = entity_service.resolve_employee_mac(e)
     return EmployeeInfo(
         id=e["id"],
         name=e.get("name", ""),
         smart_flow_tags=[
             _tag(t) for t in e.get("smart_flow_tags", []) if _tag(t) is not None
         ],
+        mac=mac,
+        has_tag=mac is not None,
     )
 
 

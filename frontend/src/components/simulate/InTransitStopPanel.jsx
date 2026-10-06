@@ -1,15 +1,13 @@
-import { useAppStore } from '../../store/appStore';
 import { useModeValidation } from './ModeSelector';
-import EntitySelectors, { vehicleMac } from './EntitySelectors';
+import EntitySelectors from './EntitySelectors';
+import { useResolvedMacs } from './useResolvedMacs';
 import { usePublish } from './usePublish';
 import ResultBanner from './ResultBanner';
 
 export default function InTransitStopPanel({ entities, errors, reload }) {
-  const vehicle = useAppStore((s) => s.selectedVehicle);
+  const { macVehicle, vehicle } = useResolvedMacs();
   const mode = useModeValidation();
   const { result, busy, publish } = usePublish();
-
-  const macVehicle = vehicleMac(vehicle);
 
   async function emit(eventType) {
     if (!macVehicle) return;
@@ -32,10 +30,10 @@ export default function InTransitStopPanel({ entities, errors, reload }) {
         showBeacon={false}
         showEmployee={false}
       />
-      {vehicle && !macVehicle && (
+      {vehicle && vehicle.has_tag === false && (
         <div className="error">Selected vehicle has no addressable tag.</div>
       )}
-      {!vehicle && <div className="muted" style={{ marginTop: 8 }}>Select a vehicle first.</div>}
+      {!macVehicle && <div className="muted" style={{ marginTop: 8 }}>Select a vehicle or enter a MAC.</div>}
       <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
         <button className="primary" disabled={disabled} onClick={() => emit('InTransit')}>
           Publish InTransit

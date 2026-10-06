@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useAppStore } from '../../store/appStore';
 import { useModeValidation } from './ModeSelector';
-import EntitySelectors, { vehicleMac } from './EntitySelectors';
+import EntitySelectors from './EntitySelectors';
+import { useResolvedMacs } from './useResolvedMacs';
 import { usePublish } from './usePublish';
 import ResultBanner from './ResultBanner';
 
@@ -14,15 +14,12 @@ function weighingBeaconFilter(entities) {
 }
 
 export default function WeighingPanel({ entities, errors, reload }) {
-  const vehicle = useAppStore((s) => s.selectedVehicle);
-  const beacon = useAppStore((s) => s.selectedBeacon);
+  const { macVehicle, macBeacon, vehicle, beacon } = useResolvedMacs();
   const mode = useModeValidation();
   const { result, busy, publish } = usePublish();
 
   const [weighingMode, setWeighingMode] = useState('Standard');
   const [weight, setWeight] = useState('');
-
-  const macVehicle = vehicleMac(vehicle);
   const weightNum = parseFloat(weight);
   const weightValid = weightNum > 0 && weightNum <= 999.99;
 
@@ -39,6 +36,8 @@ export default function WeighingPanel({ entities, errors, reload }) {
   }
 
   // Find the WeighingMachine matching the selected beacon's reference point.
+  // In manual MAC mode there is no beacon object, so Standard weighing (which
+  // needs the machine's RethinkDB id) is not available — only SimulatedEnabled.
   const wm = beacon
     ? (entities.weighingMachines || []).find(
         (w) => w.reference_point_id === beacon.reference_point_id
@@ -47,7 +46,7 @@ export default function WeighingPanel({ entities, errors, reload }) {
 
   const canPublish =
     macVehicle &&
-    beacon &&
+    macBeacon &&
     mode.valid &&
     !busy &&
     (weighingMode === 'SimulatedEnabled' || (weightValid && wm));
@@ -56,7 +55,7 @@ export default function WeighingPanel({ entities, errors, reload }) {
     await publish('/simulate/haulage', {
       event_type: 'WeighingMachine',
       mac_vehicle: macVehicle,
-      mac_beacon: beacon.mac.toUpperCase(),
+      mac_beacon: macBeacon,
       mode: mode.mode,
       date_status: mode.dateStatusIso,
       weighing_mode: weighingMode,

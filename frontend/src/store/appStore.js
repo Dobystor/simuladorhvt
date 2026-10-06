@@ -39,6 +39,12 @@ export const useAppStore = create((set, get) => ({
   simulationMode: null, // 'Online' | 'Offline'
   dateStatusInput: null,
 
+  // Manual MAC entry (overrides the dropdown selection when non-empty)
+  manualMacEntry: false,       // toggle: manual vs dropdown
+  manualMacVehicle: '',
+  manualMacBeacon: '',
+  manualMacOperator: '',
+
   // Feed (live, from WebSocket)
   eventFeed: [],
 

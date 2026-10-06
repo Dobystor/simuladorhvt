@@ -46,12 +46,16 @@ class VehicleInfo(BaseModel):
     type: int
     empty_weight: float | None = None
     smart_flow_tag: SmartFlowTagInfo | None = None
+    mac: str | None = None       # resolved uppercase SwarmId/BluetoothAddress
+    has_tag: bool = False        # True when a usable MAC could be resolved
 
 
 class EmployeeInfo(BaseModel):
     id: int
     name: str
     smart_flow_tags: list[SmartFlowTagInfo] = []
+    mac: str | None = None       # resolved uppercase SwarmId/BluetoothAddress
+    has_tag: bool = False
 
 
 class BeaconInfo(BaseModel):

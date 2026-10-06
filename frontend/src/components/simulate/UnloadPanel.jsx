@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import apiClient from '../../services/apiClient';
-import { useAppStore } from '../../store/appStore';
 import { useModeValidation } from './ModeSelector';
-import EntitySelectors, { vehicleMac, employeeMac } from './EntitySelectors';
+import EntitySelectors from './EntitySelectors';
+import { useResolvedMacs } from './useResolvedMacs';
 import { usePublish } from './usePublish';
 import ResultBanner from './ResultBanner';
 
@@ -23,13 +23,10 @@ function formatElapsed(mins) {
 }
 
 export default function UnloadPanel({ entities, errors, reload }) {
-  const vehicle = useAppStore((s) => s.selectedVehicle);
-  const beacon = useAppStore((s) => s.selectedBeacon);
-  const employee = useAppStore((s) => s.selectedEmployee);
+  const { macVehicle, macBeacon, macOperator } = useResolvedMacs();
   const mode = useModeValidation();
   const { result, busy, publish } = usePublish();
 
-  const macVehicle = vehicleMac(vehicle);
   const [loadInfo, setLoadInfo] = useState(null);
 
   useEffect(() => {
@@ -53,14 +50,14 @@ export default function UnloadPanel({ entities, errors, reload }) {
       .catch(() => setLoadInfo(null));
   }, [macVehicle]);
 
-  const canPublish = macVehicle && beacon && mode.valid && !busy;
+  const canPublish = macVehicle && macBeacon && mode.valid && !busy;
 
   async function handlePublish() {
     await publish('/simulate/haulage', {
       event_type: 'Unload',
       mac_vehicle: macVehicle,
-      mac_beacon: beacon.mac.toUpperCase(),
-      mac_operator: employeeMac(employee),
+      mac_beacon: macBeacon,
+      mac_operator: macOperator,
       mode: mode.mode,
       date_status: mode.dateStatusIso,
     });
